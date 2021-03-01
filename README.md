@@ -14,6 +14,12 @@ This year's competition focused on predicting the outcome of the [2021 NCAA Men'
 
 The majority of the data used stems from the [2021 Kaggle March Madness Competition](https://www.kaggle.com/c/ncaam-march-mania-2021/data). The data are assembled into 20 `.csv` files, stored in the `\Data` folder.
 
+These files can be downloaded using the Kaggle API: 
+
+```
+kaggle competitions download -c ncaam-march-mania-2021 -p {PATH TO YOUR DIRECTORY}
+```
+
 
 [HU]: hamline.edu
 [MM]: https://www.ncaa.com/news/basketball-men/article/2021-march-madness-schedule
