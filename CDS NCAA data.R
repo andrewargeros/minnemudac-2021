@@ -3,19 +3,21 @@ library(ncaahoopR)
 library(RCurl)
 
 ncaa = read_csv("https://query.data.world/s/rmwfowv6g4afpkrrzosypgypoqh7p5") %>% 
-  janitor::clean_names(case = "snake")
-ncaa$region_name = as.factor(ncaa$region_name)
-summary(ncaa$round)
-
-ncaa$winner = ifelse(ncaa$score>ncaa$score_1, ncaa$team, ncaa$team_1)
-ncaa$win_seed = ifelse(ncaa$score>ncaa$score_1, ncaa$seed, ncaa$seed_1)
-ncaa$lose_seed = ifelse(ncaa$score>ncaa$score_1, ncaa$seed_1, ncaa$seed)
-ncaa$upset = ifelse(ncaa$win_seed>ncaa$lose_seed, 1,0)
+  janitor::clean_names(case = "snake") %>% 
+  transform(region_name = as.factor(region_name)) %>% 
+  mutate(winner = ifelse(score > score_1, team, team_1),
+         win_seed = ifelse(score>score_1, seed, seed_1),
+         lose_seed = ifelse(score>score_1, seed_1, seed),
+         seed_diff = lose_seed - win_seed,
+         upset = ifelse(lose_seed<win_seed, 1, 0))
 
 upsetprob = ncaa %>% 
   group_by(round, win_seed) %>% 
-  summarise(s = sum(upset)/35,
-            n = n()/(35*4))
+  summarise(s = sum(upset)/n_distinct(ncaa$year), # avg per year
+            n = sum(upset)) %>% 
+  filter(n > 0)
+
+
 ggplot(upsetprob, aes(x = as.factor(win_seed), y = s, group = round, fill = s))+
   geom_col()+
   facet_wrap(~round)+
