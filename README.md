@@ -10,6 +10,10 @@ This repo contains all of the code, data, and output from our entry in the 2021 
 
 This year's competition focused on predicting the outcome of the [2021 NCAA Men's Basketball Tournament](https://en.wikipedia.org/wiki/2021_NCAA_Division_I_Men%27s_Basketball_Tournament), or March Madness.
 
+## The Data
+
+The majority of the data used stems from the [2021 Kaggle March Madness Competition](https://www.kaggle.com/c/ncaam-march-mania-2021/data). The data are assembled into 20 `.csv` files, stored in the `\Data` folder.
+
 
 [HU]: hamline.edu
 [MM]: https://www.ncaa.com/news/basketball-men/article/2021-march-madness-schedule
