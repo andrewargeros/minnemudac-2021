@@ -14,12 +14,15 @@ This year's competition focused on predicting the outcome of the [2021 NCAA Men'
 
 The majority of the data used stems from the [2021 Kaggle March Madness Competition](https://www.kaggle.com/c/ncaam-march-mania-2021/data). The data are assembled into 20 `.csv` files, stored in the `\Data` folder.
 
-These files can be downloaded using the Kaggle API: 
+These files can be downloaded using the Kaggle API:
 
 ```
 kaggle competitions download -c ncaam-march-mania-2021 -p {PATH TO YOUR DIRECTORY}
 ```
 
+### McDonalds All Americans
+
+Yearly, since 1977, McDonalds has hosted a sort of all-star game for the top high school players in the country. These players eventually go on to play Division 1 basketball, and are some of the top players in their matriculating class. By scraping Wikipedia's pages on the all star game rosters, we are able to account for the relative "Star Power" of a given team in a given season. For example, the 2018-19 Duke Blue Devils had a team of four MCD All Americans from the year previous. This is often regarded as one of the top recruiting classes in college basketball. The code to scrape this data is located in `all_americans.py` and the resulting data is stored in '/Back End Data/all_americans0320.csv'.
 
 [HU]: hamline.edu
 [MM]: https://www.ncaa.com/news/basketball-men/article/2021-march-madness-schedule
