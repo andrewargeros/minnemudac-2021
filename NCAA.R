@@ -1,5 +1,6 @@
 library(tidyverse)
 library(magrittr)
+library(glue)
 
 ncaa_results = read_csv("C:\\RScripts\\minnemudac-2021\\Data\\MNCAATourneyDetailedResults.csv") %>% 
   janitor::clean_names('snake')
@@ -27,17 +28,37 @@ reg_seas = read_csv("C:\\RScripts\\minnemudac-2021\\Data\\MRegularSeasonDetailed
          pf_diff = wpf - lpf,
          score_diff = w_score - l_score) %>% 
   mutate(across(ends_with('_diff'), ~case_when(.x > 0 ~ "W", .x < 0 ~ "L", T ~ "Tie"), .names = "greater_{.col}")) %>% 
-  mutate(id = uuid::UUIDgenerate())
+  mutate(id = map(row_number(), uuid::UUIDgenerate) %>% as.character())
 
+locations = read_csv("C:\\RScripts\\minnemudac-2021\\Data\\MGameCities.csv") %>% 
+  inner_join(., read_csv('C:\\RScripts\\minnemudac-2021\\Data\\Cities.csv'), by = "CityID") %>% 
+  janitor::clean_names('snake') %>% 
+  mutate(city_st = glue("{city}, {state}") %>% as.character())
 
 w_team_avg = reg_seas %>% 
-  select(!starts_with('l')) %>% 
-  select(!c(season, day_num)) %>% 
+  select(!starts_with('l') & !starts_with('greater')) %>% 
   rename_with(~str_remove(.x, 'w_'), starts_with("w_")) %>% 
   rename_with(~str_remove(.x, "^w"), starts_with('w')) %>% 
-  group_by(team_id, loc) %>%
-  mutate(n_games = n_distinct(id)) %>% 
-  summarise(across(everything(), mean))
+  mutate(w_l = 'W') %>% 
+  bind_rows(reg_seas %>% 
+              select((!starts_with('w') & !starts_with('greater'))) %>%  
+              rename_with(~str_remove(.x, 'l_'), starts_with("l_")) %>% 
+              rename_with(~str_remove(.x, "^l"), starts_with('l')) %>%
+              inner_join(., reg_seas %>% select(id, w_loc), by = "id") %>% 
+              rename("loc" = w_loc,
+                     "ordr_pct" = wordr_pct) %>% 
+              mutate(loc = case_when(loc == "H" ~ "A",
+                                     loc == "A" ~ "H",
+                                     loc == "N" ~ "N")) %>% 
+              mutate(w_l = "L")) %>% 
+  relocate(id, .before = season) %>% 
+  relocate(w_l, .before = team_id) %>% 
+  arrange(id) %>% 
+  inner_join(., reg_seas %>% 
+               select(id, w_team_id, l_team_id, season, day_num) %>% 
+               inner_join(., locations) %>% 
+               select(!c(w_team_id, l_team_id, season, day_num)), by = "id")
+
   
 
          
