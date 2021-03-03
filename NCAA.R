@@ -59,6 +59,7 @@ w_team_avg = reg_seas %>%
                inner_join(., locations) %>% 
                select(!c(w_team_id, l_team_id, season, day_num)), by = "id")
 
+w_team_avg %>% 
+  group_by(team_id, season, loc, w_l) %>% 
+  summarise(across(where(is.numeric), mean))
   
-
-         
