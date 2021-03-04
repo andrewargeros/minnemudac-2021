@@ -55,11 +55,26 @@ w_team_avg = reg_seas %>%
   relocate(w_l, .before = team_id) %>% 
   arrange(id) %>% 
   inner_join(., reg_seas %>% 
-               select(id, w_team_id, l_team_id, season, day_num) %>% 
-               inner_join(., locations) %>% 
-               select(!c(w_team_id, l_team_id, season, day_num)), by = "id")
+                 select(id, w_team_id, l_team_id, season, day_num) %>% 
+                 inner_join(., locations) %>% 
+                 select(!c(w_team_id, l_team_id, season, day_num)), by = "id")
+
+team_loc_wl_stats = w_team_avg %>% 
+  group_by(team_id, season, loc, w_l) %>% 
+  summarise(across(where(is.numeric), mean)) %>% 
+  arrange(season, team_id, loc, w_l)
+
+
+w_team_avg %>% # home team advantage doesn't seem to be a huge deal
+  group_by(loc, w_l) %>% 
+  summarise(s = mean(score)) %>% 
+  ggplot() +
+  aes(x = loc, y = s, fill = w_l) +
+  geom_bar(stat = "identity") +
+  facet_wrap(~w_l) +
+  theme_minimal()
 
 w_team_avg %>% 
-  group_by(team_id, season, loc, w_l) %>% 
-  summarise(across(where(is.numeric), mean))
-  
+  ggplot() +
+  aes(x = to, y = score, color = w_l) +
+  geom_jitter()

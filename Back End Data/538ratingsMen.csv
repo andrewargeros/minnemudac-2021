@@ -1,0 +1,273 @@
+Season,TeamID,TeamName,538rating
+2016,1242,Kansas,94.46
+2016,1314,North Carolina,93.94
+2016,1438,Virginia,92.46
+2016,1277,Michigan State,91.84
+2016,1328,Oklahoma,89.96
+2016,1437,Villanova,91.29
+2016,1246,Kentucky,90.69
+2016,1452,West Virginia,89.3
+2016,1345,Purdue,88.68
+2016,1332,Oregon,88
+2016,1401,Texas A&M,86.82
+2016,1112,Arizona,89.04
+2016,1462,Xavier,87.73
+2016,1181,Duke,87.33
+2016,1268,Maryland,87.37
+2016,1231,Indiana,87.36
+2016,1274,Miami (FL),87.05
+2016,1235,Iowa State,86.5
+2016,1124,Baylor,85.47
+2016,1400,Texas,84.66
+2016,1428,Utah,86.64
+2016,1455,Wichita State,86.59
+2016,1234,Iowa,85.91
+2016,1435,Vanderbilt,85.59
+2016,1143,California,85.62
+2016,1211,Gonzaga,85.96
+2016,1458,Wisconsin,84.75
+2016,1323,Notre Dame,84.36
+2016,1163,Connecticut,85.32
+2016,1153,Cincinnati,83.7
+2016,1139,Butler,84.17
+2016,1371,Seton Hall,84.46
+2016,1433,Virginia Commonwealth,83.05
+2016,1173,Dayton,82.37
+2016,1393,Syracuse,82.69
+2016,1338,Pittsburgh,82.29
+2016,1386,Saint Joseph's,81.61
+2016,1344,Providence,82.48
+2016,1320,Northern Iowa,80.24
+2016,1160,Colorado,81.46
+2016,1372,Stephen F. Austin,80.98
+2016,1463,Yale,80.2
+2016,1403,Texas Tech,81.27
+2016,1409,Tulsa,79.93
+2016,1276,Michigan,79.57
+2016,1425,Southern California,81.4
+2016,1114,Arkansas-Little Rock,78.9
+2016,1355,South Dakota State,78.64
+2016,1396,Temple,78.48
+2016,1423,North Carolina-Wilmington,77.72
+2016,1333,Oregon State,77.63
+2016,1233,Iona,78.22
+2016,1453,Green Bay,76.18
+2016,1392,Stony Brook,77.09
+2016,1218,Hawaii,78.02
+2016,1151,Chattanooga,76.6
+2016,1201,Fresno State,76.61
+2016,1138,Buffalo,75.66
+2016,1167,Cal State Bakersfield,74.97
+2016,1292,Middle Tennessee,75.02
+2016,1421,North Carolina-Asheville,74.17
+2016,1451,Weber State,73.28
+2016,1195,Florida Gulf Coast,71.41
+2016,1122,Austin Peay,68.83
+2016,1380,Southern,67.96
+2016,1214,Hampton,68.61
+2016,1221,Holy Cross,66.85
+2016,1192,Fairleigh Dickinson,66.72
+2017,1437,Villanova,95.18
+2017,1211,Gonzaga,93.71
+2017,1242,Kansas,92.18
+2017,1246,Kentucky,92.28
+2017,1314,North Carolina,91.74
+2017,1181,Duke,92.26
+2017,1257,Louisville,90.8
+2017,1112,Arizona,88.99
+2017,1452,West Virginia,90.8
+2017,1417,UCLA,88.02
+2017,1438,Virginia,90.02
+2017,1388,Saint Mary's (CA),87.39
+2017,1345,Purdue,88.61
+2017,1455,Wichita State,88.86
+2017,1374,Southern Methodist,88.43
+2017,1235,Iowa State,87.92
+2017,1124,Baylor,87.66
+2017,1332,Oregon,87.3
+2017,1139,Butler,86.52
+2017,1196,Florida,87.84
+2017,1199,Florida State,87.22
+2017,1153,Cincinnati,87.35
+2017,1458,Wisconsin,87.84
+2017,1276,Michigan,86.86
+2017,1323,Notre Dame,86.68
+2017,1166,Creighton,84.43
+2017,1329,Oklahoma State,84.71
+2017,1274,Miami (FL),84.56
+2017,1116,Arkansas,83.19
+2017,1435,Vanderbilt,83.79
+2017,1348,Rhode Island,84.02
+2017,1243,Kansas State,83.08
+2017,1376,South Carolina,83.08
+2017,1371,Seton Hall,82.95
+2017,1173,Dayton,82.84
+2017,1266,Marquette,83.01
+2017,1277,Michigan State,82.79
+2017,1448,Wake Forest,82.96
+2017,1462,Xavier,82.34
+2017,1433,Virginia Commonwealth,82.93
+2017,1292,Middle Tennessee,81.28
+2017,1268,Maryland,82.48
+2017,1321,Northwestern,82.6
+2017,1278,Minnesota,81.23
+2017,1344,Providence,81.75
+2017,1425,Southern California,81.18
+2017,1305,Nevada,80.73
+2017,1343,Princeton,80
+2017,1423,North Carolina-Wilmington,80.19
+2017,1439,Virginia Tech,80.02
+2017,1436,Vermont,79.49
+2017,1137,Bucknell,77.93
+2017,1190,East Tennessee State,78.05
+2017,1457,Winthrop,75.53
+2017,1195,Florida Gulf Coast,75.81
+2017,1308,New Mexico State,75.6
+2017,1233,Iona,75.49
+2017,1245,Kent State,74.27
+2017,1407,Troy,73.28
+2017,1297,Northern Kentucky,72.83
+2017,1355,South Dakota State,72.79
+2017,1315,North Dakota,72.33
+2017,1411,Texas Southern,70.99
+2017,1240,Jacksonville State,71.17
+2017,1300,North Carolina Central,71.04
+2017,1413,UC-Davis,69.94
+2017,1291,Mount St. Mary's,69.78
+2017,1309,New Orleans,69.24
+2018,1437,Villanova,94.92
+2018,1438,Virginia,93.07
+2018,1181,Duke,92.59
+2018,1242,Kansas,90.88
+2018,1277,Michigan State,91.67
+2018,1153,Cincinnati,91.06
+2018,1345,Purdue,91.08
+2018,1314,North Carolina,90.62
+2018,1211,Gonzaga,89.54
+2018,1462,Xavier,88.88
+2018,1276,Michigan,88.54
+2018,1246,Kentucky,88.17
+2018,1397,Tennessee,87.17
+2018,1452,West Virginia,88.58
+2018,1455,Wichita State,87.97
+2018,1112,Arizona,87.86
+2018,1222,Houston,86.21
+2018,1403,Texas Tech,87.27
+2018,1196,Florida,86.43
+2018,1326,Ohio State,85.59
+2018,1395,Texas Christian,84.84
+2018,1371,Seton Hall,85.05
+2018,1120,Auburn,84.04
+2018,1139,Butler,84.65
+2018,1155,Clemson,84.15
+2018,1401,Texas A&M,83.55
+2018,1274,Miami (FL),83.94
+2018,1199,Florida State,83.61
+2018,1400,Texas,82.9
+2018,1166,Creighton,83.4
+2018,1439,Virginia Tech,83.43
+2018,1116,Arkansas,83.29
+2018,1361,San Diego State,81.72
+2018,1243,Kansas State,81.48
+2018,1348,Rhode Island,83.07
+2018,1328,Oklahoma,82.1
+2018,1417,UCLA,83.22
+2018,1281,Missouri,78.49
+2018,1104,Alabama,82.2
+2018,1260,Loyola (IL),81.28
+2018,1172,Davidson,81.9
+2018,1301,North Carolina State,81.74
+2018,1305,Nevada,81.82
+2018,1393,Syracuse,81.86
+2018,1344,Providence,81.27
+2018,1308,New Mexico State,79.79
+2018,1113,Arizona State,81.26
+2018,1382,St. Bonaventure,80.26
+2018,1355,South Dakota State,78.07
+2018,1138,Buffalo,79.07
+2018,1293,Murray State,78.93
+2018,1422,North Carolina-Greensboro,78.03
+2018,1137,Bucknell,78.25
+2018,1209,Georgia State,75.99
+2018,1285,Montana,76.79
+2018,1158,College of Charleston,76.44
+2018,1335,Pennsylvania,75.55
+2018,1267,Marshall,75.58
+2018,1372,Stephen F. Austin,74.78
+2018,1460,Wright State,74.31
+2018,1233,Iona,74.79
+2018,1252,Lipscomb,72.45
+2018,1420,Maryland-Baltimore County,71.36
+2018,1347,Radford,70.89
+2018,1168,Cal State Fullerton,71.88
+2018,1411,Texas Southern,67.93
+2018,1254,Long Island University,67.64
+2018,1300,North Carolina Central,65.3
+2019,1181,Duke,96.3
+2019,1438,Virginia,95.22
+2019,1211,Gonzaga,95.02
+2019,1314,North Carolina,93.24
+2019,1277,Michigan State,92.28
+2019,1246,Kentucky,91.24
+2019,1397,Tennessee,91.34
+2019,1276,Michigan,91.04
+2019,1403,Texas Tech,89.65
+2019,1345,Purdue,89.04
+2019,1439,Virginia Tech,89.26
+2019,1120,Auburn,89.02
+2019,1222,Houston,87.89
+2019,1199,Florida State,88.44
+2019,1242,Kansas,86.3
+2019,1235,Iowa State,86.12
+2019,1458,Wisconsin,86.54
+2019,1437,Villanova,86.96
+2019,1243,Kansas State,86.65
+2019,1261,Louisiana State,86.37
+2019,1153,Cincinnati,85.44
+2019,1257,Louisville,85.9
+2019,1305,Nevada,86.11
+2019,1268,Maryland,84.82
+2019,1138,Buffalo,85.74
+2019,1280,Mississippi State,85.11
+2019,1266,Marquette,84.41
+2019,1459,Wofford,84.38
+2019,1393,Syracuse,83.92
+2019,1196,Florida,83.95
+2019,1326,Ohio State,82.59
+2019,1328,Oklahoma,83.01
+2019,1234,Iowa,82.36
+2019,1125,Belmont,81.74
+2019,1113,Arizona State,81.94
+2019,1332,Oregon,82.64
+2019,1371,Seton Hall,82.2
+2019,1388,Saint Mary's (CA),83.58
+2019,1429,Utah State,82.26
+2019,1279,Mississippi,81.64
+2019,1433,Virginia Commonwealth,81.7
+2019,1449,Washington,82.55
+2019,1278,Minnesota,80.84
+2019,1293,Murray State,81.29
+2019,1416,Central Florida,81.72
+2019,1308,New Mexico State,80.91
+2019,1124,Baylor,80.76
+2019,1436,Vermont,79.29
+2019,1318,Northeastern,78.58
+2019,1251,Liberty,78.02
+2019,1414,UC-Irvine,78.36
+2019,1463,Yale,77.11
+2019,1297,Northern Kentucky,77.27
+2019,1387,Saint Louis,77.01
+2019,1330,Old Dominion,76.98
+2019,1209,Georgia State,76.3
+2019,1285,Montana,76.17
+2019,1159,Colgate,74.95
+2019,1133,Bradley,72.91
+2019,1205,Gardner-Webb,71.74
+2019,1101,Abilene Christian,72.33
+2019,1233,Iona,71.88
+2019,1295,North Dakota State,70.79
+2019,1192,Fairleigh Dickinson,70.86
+2019,1300,North Carolina Central,65.48
+2019,1396,Temple,79.39
+2019,1341,Prairie View,69.57
+2019,1385,St. John's (NY),78.84
