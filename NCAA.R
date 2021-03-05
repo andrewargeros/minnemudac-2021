@@ -57,7 +57,13 @@ w_team_avg = reg_seas %>%
   inner_join(., reg_seas %>% 
                  select(id, w_team_id, l_team_id, season, day_num) %>% 
                  inner_join(., locations) %>% 
-                 select(!c(w_team_id, l_team_id, season, day_num)), by = "id")
+                 select(!c(w_team_id, l_team_id, season, day_num)), by = "id") %>% 
+  ungroup() %>% 
+  group_by(team_id, season) %>% 
+  mutate(all_games = n_distinct(id)) %>% 
+  ungroup() %>% 
+  group_by(team_id, season, w_l) %>% 
+  mutate(games = n_distinct(id))
 
 team_loc_wl_stats = w_team_avg %>% 
   group_by(team_id, season, loc, w_l) %>% 
@@ -78,3 +84,51 @@ w_team_avg %>%
   ggplot() +
   aes(x = to, y = score, color = w_l) +
   geom_jitter()
+
+conferences = read_csv("C:\\RScripts\\minnemudac-2021\\Data\\MTeamConferences.csv") %>% 
+  inner_join(., read_csv('C:\\RScripts\\minnemudac-2021\\Data\\Conferences.csv')) %>% 
+  inner_join(., read_csv('C:\\RScripts\\minnemudac-2021\\Data\\MTeams.csv')) %>% 
+  janitor::clean_names('snake') %>% 
+  mutate(desc_clean = str_remove(description, 'Conference')) %>% 
+  mutate(team_name2 = str_replace(team_name, 'Univ$', 'University') %>% 
+                        str_replace(' St', ' State') %>% 
+                        str_replace('Stateate', 'State')) %>% 
+  filter(last_d1season >= 2003) %>% 
+  arrange(description) %>% 
+  left_join(., read_csv("C:\\RScripts\\minnemudac-2021\\Back End Data\\sports_reference_teams.csv") %>% 
+                mutate(team = str_replace_all(team, '&amp;', '&')), by = c('team_name2' = 'team')) %>% 
+  left_join(., read_csv('C:\\RScripts\\minnemudac-2021\\Back End Data\\matched_names.csv'), 
+            by = c('team_name2' = 'TeamName')) %>% 
+  mutate(sref_name = ifelse(is.na(link), team, team_name2))
+
+conferences %>% 
+  filter(is.na(sref_name)) %>% 
+  select(team_name) %>% 
+  unique() # check missing data
+
+player_stats = read_csv('C:\\RScripts\\minnemudac-2021\\Back End Data\\player_stats_detail_0321.csv') %>% 
+  left_join(., read_csv('C:\\RScripts\\minnemudac-2021\\Back End Data\\player_stats_0321.csv'),
+            by = c('season' = 'year', 'team' = 'team', 'Player' = 'Player')) %>% 
+  janitor::clean_names('snake') %>% 
+  select(-rk) %>% 
+  mutate(height = 12*(str_extract(height, '^\\d') %>% as.numeric()) + (str_extract(height, '\\d$') %>% as.numeric())) %>% 
+  mutate(across)
+  mutate(x3pt_pt_pct = x3p/(x3p + x2p)) %>% 
+  mutate(across(2:26, ~g*.x, .names = "ev_{.col}")) %>% 
+  mutate(s_eff = (ev_pts + ev_ast + ev_trb + ev_blk - (ev_x2pa - ev_x2p) - (ev_x3pa - ev_x3p) - (ev_fta - ev_ft) - ev_tov),
+         pg_eff = (pts + ast + trb + blk - (x2pa - x2p) - (x3pa - x3p) - (fta - ft) - tov)) %>% 
+  group_by(season) %>% 
+  mutate(across(where(is.numeric), ~ntile(.x, n = 100), .names = "season_{.col}_pctile")) %>% 
+  relocate(team, .before = player) %>% 
+  relocate(season, .before = team)
+
+team_level_player_stats = player_stats %>% 
+  group_by(season, team) %>% 
+  summarise(across(where(is.numeric), mean)) %>% 
+  inner_join(., player_stats %>% 
+                  group_by(season, team) %>% 
+                  summarise(across(where(is.numeric), mean)) %>% 
+                  ungroup() %>% 
+                  group_by(team) %>% 
+                  summarise(across(where(is.numeric), cummean, .names = 'cum_{.col}')),
+             by = 'team')
