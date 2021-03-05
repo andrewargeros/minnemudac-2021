@@ -26,6 +26,7 @@ for link in links:
 
 ranking_df_list = []
 player_df_list = []
+player_detail_list = []
 for team in all_teams:
   url = f'https://www.sports-reference.com{team["link"]}'
   print(url)
@@ -53,13 +54,20 @@ for team in all_teams:
 
   for year in range(2003, 2022):
     try:
-      player_data = pd.read_html(f'{url}/{year}.html')[0]
+      player_data_a = pd.read_html(f'{url}/{year}.html')
+      player_data = player_data_a[0]
       player_data['year'] = year
       player_data['team'] = team['team']
-
       player_df_list.append(player_data)
+
+      for table in player_data_a[1:]:
+        if table.shape[0] > 10: 
+          table['season'] = year
+          table['team'] = team['team']
+          player_detail_list.append(table)
     except:
-      print(f"Could Not Find Ranking Data For {team['team']} in Year {year}")
+      print(f"Could Not Find Player Level Data For {team['team']} in Year {year}")
 
 pd.concat(player_df_list, ignore_index=True).to_csv("player_stats_0321.csv", index=False)
+pd.concat(player_detail_list, ignore_index=True).to_csv("player_stats_detail_0321.csv", index=False)
 pd.concat(ranking_df_list, ignore_index=True).to_csv("team_ap_historical_rank.csv", index=False)
