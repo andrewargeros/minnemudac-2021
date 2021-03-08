@@ -112,7 +112,7 @@ player_stats = read_csv('C:\\RScripts\\minnemudac-2021\\Back End Data\\player_st
   janitor::clean_names('snake') %>% 
   select(-rk) %>% 
   mutate(height = 12*(str_extract(height, '^\\d') %>% as.numeric()) + (str_extract(height, '\\d$') %>% as.numeric())) %>% 
-  mutate(across)
+  # mutate(across)
   mutate(x3pt_pt_pct = x3p/(x3p + x2p)) %>% 
   mutate(across(2:26, ~g*.x, .names = "ev_{.col}")) %>% 
   mutate(s_eff = (ev_pts + ev_ast + ev_trb + ev_blk - (ev_x2pa - ev_x2p) - (ev_x3pa - ev_x3p) - (ev_fta - ev_ft) - ev_tov),
@@ -124,11 +124,20 @@ player_stats = read_csv('C:\\RScripts\\minnemudac-2021\\Back End Data\\player_st
 
 team_level_player_stats = player_stats %>% 
   group_by(season, team) %>% 
-  summarise(across(where(is.numeric), mean)) %>% 
+  summarise(across(where(is.numeric), ~mean(.x, na.rm = T))) %>% 
   inner_join(., player_stats %>% 
                   group_by(season, team) %>% 
-                  summarise(across(where(is.numeric), mean)) %>% 
+                  summarise(across(where(is.numeric), ~mean(.x, na.rm = T))) %>% 
                   ungroup() %>% 
                   group_by(team) %>% 
-                  summarise(across(where(is.numeric), cummean, .names = 'cum_{.col}')),
-             by = 'team')
+                  summarise(across(where(is.numeric), cummean, .names = 'cum_{.col}')) %>% 
+                  filter(cum_season %% 1 == 0.5) %>% 
+                  mutate(cum_season = as.integer(cum_season + 0.5)),
+             by = c('team', 'season' = 'cum_season'))
+
+test = player_stats %>% 
+  group_by(season, team) %>% 
+  summarise(across(where(is.numeric), ~mean(.x, na.rm = T))) %>% 
+  ungroup() %>% 
+  group_by(team) %>% 
+  summarise(across(where(is.numeric), cummean, .names = 'cum_{.col}'))
