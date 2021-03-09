@@ -120,24 +120,66 @@ player_stats = read_csv('C:\\RScripts\\minnemudac-2021\\Back End Data\\player_st
   group_by(season) %>% 
   mutate(across(where(is.numeric), ~ntile(.x, n = 100), .names = "season_{.col}_pctile")) %>% 
   relocate(team, .before = player) %>% 
-  relocate(season, .before = team)
+  relocate(season, .before = team) %>% 
+  mutate(rsci_top_100 = str_remove_all(rsci_top_100, " \\(.*?\\)$") %>% as.numeric(),
+         rsci_top_100 = replace_na(rsci_top_100, 999))
 
 team_level_player_stats = player_stats %>% 
   group_by(season, team) %>% 
   summarise(across(where(is.numeric), ~mean(.x, na.rm = T))) %>% 
-  inner_join(., player_stats %>% 
+  # inner_join(., player_stats %>% 
+  #                 group_by(season, team) %>% 
+  #                 summarise(across(where(is.numeric), ~mean(.x, na.rm = T))) %>% 
+  #                 ungroup() %>% 
+  #                 group_by(team) %>% 
+  #                 summarise(across(where(is.numeric), cummean, .names = 'cum_{.col}')) %>% 
+  #                 filter(cum_season %% 1 == 0.5) %>% 
+  #                 mutate(cum_season = as.integer(cum_season + 0.5)) %>% 
+  #                 rename("season" = cum_season),
+  #            by = c('team', 'season')) %>%  # this is causing either multiple NAs or data to be cutoff at 2016
+  left_join(., player_stats %>% 
+                  select(season, team, player, class, gs) %>% 
                   group_by(season, team) %>% 
-                  summarise(across(where(is.numeric), ~mean(.x, na.rm = T))) %>% 
+                  mutate(rank = row_number(-gs)) %>% 
+                  filter(rank <= 5) %>% 
                   ungroup() %>% 
-                  group_by(team) %>% 
-                  summarise(across(where(is.numeric), cummean, .names = 'cum_{.col}')) %>% 
-                  filter(cum_season %% 1 == 0.5) %>% 
-                  mutate(cum_season = as.integer(cum_season + 0.5)),
-             by = c('team', 'season' = 'cum_season'))
+                  group_by(season, team, class) %>% 
+                  summarise(n = n_distinct(player)) %>% 
+                  mutate(class = case_when(class == "FR" ~ 'freshman',
+                                           class == "SO" ~ 'sophomore',
+                                           class == "JR" ~ 'junior',
+                                           class == 'SR' ~ 'senior',
+                                           T ~ 'unknown_class')) %>% 
+                  pivot_wider(names_from = class, values_from = n) %>% 
+                  mutate(across(everything(), ~replace_na(.x, 0))),
+            by = c('team', 'season')) # bind this to `w_team_avg` once both are wrangled
 
-test = player_stats %>% 
-  group_by(season, team) %>% 
-  summarise(across(where(is.numeric), ~mean(.x, na.rm = T))) %>% 
-  ungroup() %>% 
-  group_by(team) %>% 
-  summarise(across(where(is.numeric), cummean, .names = 'cum_{.col}'))
+# Season Average Data For Missing Team/Season from Above
+
+na_season_data = team_level_player_stats %>% 
+  group_by(season) %>% 
+  summarise(across(where(is.numeric), ~mean(.x, na.rm = T)))
+
+# Ken Pom Ratings Data 
+
+kenpom = read_csv('C:\\RScripts\\minnemudac-2021\\Back End Data\\kenpom_ratings0321.csv') %>%
+  janitor::clean_names('snake') %>% 
+  filter(!str_detect(rk, 'R')) %>% 
+  mutate(team_clean = str_remove_all(team, '\\d') %>% 
+                      str_remove_all('\\.') %>% 
+                      str_remove_all('\\*') %>% 
+                      str_replace_all(' St$| St ', ' State ') %>% 
+                      str_trim()) %>% 
+  mutate(across(everything(), ~str_remove_all(.x, '\\+'))) %>% 
+  mutate(across(5:22, as.numeric)) %>% 
+  select(!ends_with('_sub'))
+
+test = conferences %>% 
+  select(sref_name) %>%
+  distinct() %>% 
+  left_join(., kenpom %>% 
+                select(team_clean) %>% 
+                distinct(),
+            by = c('sref_name' = 'team_clean'),
+            keep = T)
+kp_names = kenpom %>% select(team_clean) %>% distinct()
