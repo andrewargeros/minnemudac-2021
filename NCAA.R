@@ -99,7 +99,11 @@ conferences = read_csv("C:\\RScripts\\minnemudac-2021\\Data\\MTeamConferences.cs
                 mutate(team = str_replace_all(team, '&amp;', '&')), by = c('team_name2' = 'team')) %>% 
   left_join(., read_csv('C:\\RScripts\\minnemudac-2021\\Back End Data\\matched_names.csv'), 
             by = c('team_name2' = 'TeamName')) %>% 
+  left_join(., name_key, by = c(''))
   mutate(sref_name = ifelse(is.na(link), team, team_name2))
+
+name_key = read_csv('https://raw.githubusercontent.com/pjmartinkus/College_Basketball/master/Data/School_Names/schools.csv') %>% 
+  janitor::clean_names('snake')
 
 conferences %>% 
   filter(is.na(sref_name)) %>% 
@@ -153,6 +157,7 @@ team_level_player_stats = player_stats %>%
                   pivot_wider(names_from = class, values_from = n) %>% 
                   mutate(across(everything(), ~replace_na(.x, 0))),
             by = c('team', 'season')) # bind this to `w_team_avg` once both are wrangled
+team_level_player_stats %>% write_csv('C:\\RScripts\\minnemudac-2021\\Back End Data\\team_level_player_stats.csv')
 
 # Season Average Data For Missing Team/Season from Above
 
