@@ -102,8 +102,29 @@ conferences = read_csv("C:\\RScripts\\minnemudac-2021\\Data\\MTeamConferences.cs
   left_join(., name_key, by = c(''))
   mutate(sref_name = ifelse(is.na(link), team, team_name2))
 
+
 name_key = read_csv('https://raw.githubusercontent.com/pjmartinkus/College_Basketball/master/Data/School_Names/schools.csv') %>% 
   janitor::clean_names('snake')
+
+test = conferences %>% 
+  select(team_id, team_name, sref_name) %>% 
+  distinct() %>% 
+  left_join(., name_key, by = c('sref_name' = 'scores')) %>%
+  mutate(kenpom_t_rank = str_replace_all(kenpom_t_rank, '&amp;', '&')) %>% 
+  mutate(name = ifelse(is.na(kenpom_t_rank), sref_name, kenpom_t_rank)) %>% 
+  mutate(name = case_when(name == 'Tennessee-Martin' ~ 'Tennessee Martin',
+                          name == 'Dixie State' ~ 'Dixie St.',
+                          name == 'Tarleton State' ~ 'Tarleton St.',
+                          T ~ as.character(name))) %>% 
+  left_join(., kenpom %>% 
+                select(team) %>% 
+                mutate(team = str_remove_all(team, '\\d') %>% 
+                         str_remove_all('\\*') %>% 
+                         str_trim()) %>% 
+                distinct(),
+            by = c('name' = 'team'),
+            keep = T) %>% 
+  arrange(!is.na(team))
 
 conferences %>% 
   filter(is.na(sref_name)) %>% 
@@ -179,12 +200,9 @@ kenpom = read_csv('C:\\RScripts\\minnemudac-2021\\Back End Data\\kenpom_ratings0
   mutate(across(5:22, as.numeric)) %>% 
   select(!ends_with('_sub'))
 
-test = conferences %>% 
-  select(sref_name) %>%
-  distinct() %>% 
-  left_join(., kenpom %>% 
-                select(team_clean) %>% 
-                distinct(),
-            by = c('sref_name' = 'team_clean'),
-            keep = T)
-kp_names = kenpom %>% select(team_clean) %>% distinct()
+kp_names = kenpom %>% 
+  select(team) %>% 
+  mutate(team = str_remove_all(team, '\\d') %>% 
+           str_remove_all('\\*') %>% 
+           str_trim()) %>% 
+  distinct()
