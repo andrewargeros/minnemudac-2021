@@ -85,6 +85,9 @@ w_team_avg %>%
   aes(x = to, y = score, color = w_l) +
   geom_jitter()
 
+name_key = read_csv('https://raw.githubusercontent.com/pjmartinkus/College_Basketball/master/Data/School_Names/schools.csv') %>% 
+  janitor::clean_names('snake')
+
 conferences = read_csv("C:\\RScripts\\minnemudac-2021\\Data\\MTeamConferences.csv") %>% 
   inner_join(., read_csv('C:\\RScripts\\minnemudac-2021\\Data\\Conferences.csv')) %>% 
   inner_join(., read_csv('C:\\RScripts\\minnemudac-2021\\Data\\MTeams.csv')) %>% 
@@ -102,8 +105,24 @@ conferences = read_csv("C:\\RScripts\\minnemudac-2021\\Data\\MTeamConferences.cs
   left_join(., name_key, by = c(''))
   mutate(sref_name = ifelse(is.na(link), team, team_name2))
 
+<<<<<<< Updated upstream
 name_key = read_csv('https://raw.githubusercontent.com/pjmartinkus/College_Basketball/master/Data/School_Names/schools.csv') %>% 
   janitor::clean_names('snake')
+=======
+test = conferences %>% 
+  select(team_name, sref_name) %>% 
+  distinct() %>% 
+  left_join(., name_key, by = c('sref_name' = 'scores')) %>%
+  mutate(kenpom_t_rank = str_replace_all(kenpom_t_rank, '&amp;', '&')) %>% 
+  mutate(name = ifelse(is.na(kenpom_t_rank), sref_name, kenpom_t_rank)) %>% 
+  left_join(., kenpom %>% 
+                select(team) %>% 
+                mutate(team = str_remove_all(team, '\\d') %>% str_trim()) %>% 
+                distinct(),
+            by = c('name' = 'team'),
+            keep = T) %>% 
+  arrange(!is.na(team))
+>>>>>>> Stashed changes
 
 conferences %>% 
   filter(is.na(sref_name)) %>% 
@@ -179,12 +198,4 @@ kenpom = read_csv('C:\\RScripts\\minnemudac-2021\\Back End Data\\kenpom_ratings0
   mutate(across(5:22, as.numeric)) %>% 
   select(!ends_with('_sub'))
 
-test = conferences %>% 
-  select(sref_name) %>%
-  distinct() %>% 
-  left_join(., kenpom %>% 
-                select(team_clean) %>% 
-                distinct(),
-            by = c('sref_name' = 'team_clean'),
-            keep = T)
 kp_names = kenpom %>% select(team_clean) %>% distinct()
