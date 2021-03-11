@@ -11,10 +11,14 @@ reg_seas = read_csv("C:\\RScripts\\minnemudac-2021\\Data\\MRegularSeasonDetailed
          w_fg3_pct = wfgm3/wfga3,
          w_ft_pct = wftm/wfta,
          w_ordr_pct = wor/wdr,
+         w_true_shoot = w_score/(2*((wfga+wfga3) + 0.44*wfta)),
+         w_efg = (wfgm + wfgm3 + (0.5*wfgm3))/(wfga + wfga3),
          l_fg_pct = lfgm/lfga,
          l_fg3_pct = lfgm3/lfga3,
          l_ft_pct = lftm/lfta,
          l_wordr_pct = lor/ldr,
+         l_true_shoot = l_score/(2*((lfga+lfga3) + 0.44*lfta)),
+         l_efg = (lfgm + lfgm3 + (0.5*lfgm3))/(lfga + lfga3),
          fgm_diff = wfgm-lfgm,
          fga_diff = wfga-lfga,
          fg3m_diff = wfgm3 - lfga3,
@@ -201,6 +205,17 @@ test_mcd = player_stats %>%
                 mutate(all_american = 1), 
             by = c('player' = 'name')) %>% 
   select(season, team, player, all_american)
+
+
+
+missing = mcdon %>% 
+  filter(!college_of_choice %in% c('No College', '')) %>% 
+  anti_join(., test_mcd %>% 
+                filter(all_american == 1) %>% 
+                ungroup() %>% 
+                select(player) %>% 
+                distinct(),
+            by = c('name' = 'player'))
 
 # Season Average Data For Missing Team/Season from Above
 
