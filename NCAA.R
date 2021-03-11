@@ -13,12 +13,26 @@ reg_seas = read_csv("C:\\RScripts\\minnemudac-2021\\Data\\MRegularSeasonDetailed
          w_ordr_pct = wor/wdr,
          w_true_shoot = w_score/(2*((wfga+wfga3) + 0.44*wfta)),
          w_efg = (wfgm + wfgm3 + (0.5*wfgm3))/(wfga + wfga3),
+         w_poss = 0.96*(wfga + wfga3 - wor + wto + (0.44*wfta)),
+         w_o_eff = (w_score + w_ast + wor + wdr + w_blk - 
+                   (wfga - wfgm) - (wfga3 - wfgm3) - (wfta - wftm) - wto),
+         w_off_rate = 100*(w_score / w_poss),
+         w_def_rate = 100*(l_score / w_poss),
+         w_rate_diff = w_off_rate - w_def_rate,
          l_fg_pct = lfgm/lfga,
          l_fg3_pct = lfgm3/lfga3,
          l_ft_pct = lftm/lfta,
          l_wordr_pct = lor/ldr,
          l_true_shoot = l_score/(2*((lfga+lfga3) + 0.44*lfta)),
          l_efg = (lfgm + lfgm3 + (0.5*lfgm3))/(lfga + lfga3),
+         l_poss = 0.96*(lfga + lfga3 - lor + lto + (0.44*lfta)),
+         l_o_eff = (l_score + l_ast + lor + ldr + l_blk - 
+                   (lfga - lfgm) - (lfga3 - lfgm3) - (lfta - lftm) - lto),
+         l_off_rate = 100*(l_score / l_poss),
+         l_def_rate = 100*(w_score / l_poss),
+         l_rate_diff = l_off_rate - l_def_rate,
+         off_rate_diff = w_off_rate - l_off_rate,
+         def_rate_diff = w_def_rate - l_def_rate,
          fgm_diff = wfgm-lfgm,
          fga_diff = wfga-lfga,
          fg3m_diff = wfgm3 - lfga3,
@@ -194,10 +208,11 @@ mcdon = read_csv('C:\\RScripts\\minnemudac-2021\\Back End Data\\all_americans032
   janitor::clean_names('snake') %>% 
   mutate(no = replace_na(no, 0)) %>% 
   filter(no != 'No.') %>% 
-  mutate(college_of_choice = ifelse(str_detect(college_of_choice, 'not attend|Not Attend'), 
+  mutate(college_of_choice = ifelse(str_detect(college_of_choice, 'not attend|Not Attend|Undecided'), 
                                     'No College', college_of_choice)) %>% 
   mutate(college_of_choice = str_remove_all(college_of_choice, '\\[.*?\\]') %>% 
-                             str_remove_all('[^A-Za-z ]'))
+                             str_remove_all('[^A-Za-z ]')) %>% 
+  mutate(l_name = glue("{str_extract(name, '^.')} {str_extract(name, ' (.*?)$')}"))
 
 test_mcd = player_stats %>% 
   left_join(., mcdon %>% 
@@ -206,16 +221,15 @@ test_mcd = player_stats %>%
             by = c('player' = 'name')) %>% 
   select(season, team, player, all_american)
 
-
-
 missing = mcdon %>% 
   filter(!college_of_choice %in% c('No College', '')) %>% 
   anti_join(., test_mcd %>% 
                 filter(all_american == 1) %>% 
                 ungroup() %>% 
                 select(player) %>% 
-                distinct(),
-            by = c('name' = 'player'))
+                distinct() %>% 
+                mutate(l_name = glue("{str_extract(player, '^.')} {str_extract(player, ' (.*?)$')}")),
+            by = 'l_name')
 
 # Season Average Data For Missing Team/Season from Above
 
