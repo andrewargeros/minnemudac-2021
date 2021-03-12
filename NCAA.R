@@ -13,12 +13,26 @@ reg_seas = read_csv("C:\\RScripts\\minnemudac-2021\\Data\\MRegularSeasonDetailed
          w_ordr_pct = wor/wdr,
          w_true_shoot = w_score/(2*((wfga+wfga3) + 0.44*wfta)),
          w_efg = (wfgm + wfgm3 + (0.5*wfgm3))/(wfga + wfga3),
+         w_poss = 0.96*(wfga + wfga3 - wor + wto + (0.44*wfta)),
+         w_o_eff = (w_score + w_ast + wor + wdr + w_blk - 
+                   (wfga - wfgm) - (wfga3 - wfgm3) - (wfta - wftm) - wto),
+         w_off_rate = 100*(w_score / w_poss),
+         w_def_rate = 100*(l_score / w_poss),
+         w_rate_diff = w_off_rate - w_def_rate,
          l_fg_pct = lfgm/lfga,
          l_fg3_pct = lfgm3/lfga3,
          l_ft_pct = lftm/lfta,
          l_wordr_pct = lor/ldr,
          l_true_shoot = l_score/(2*((lfga+lfga3) + 0.44*lfta)),
          l_efg = (lfgm + lfgm3 + (0.5*lfgm3))/(lfga + lfga3),
+         l_poss = 0.96*(lfga + lfga3 - lor + lto + (0.44*lfta)),
+         l_o_eff = (l_score + l_ast + lor + ldr + l_blk - 
+                   (lfga - lfgm) - (lfga3 - lfgm3) - (lfta - lftm) - lto),
+         l_off_rate = 100*(l_score / l_poss),
+         l_def_rate = 100*(w_score / l_poss),
+         l_rate_diff = l_off_rate - l_def_rate,
+         off_rate_diff = w_off_rate - l_off_rate,
+         def_rate_diff = w_def_rate - l_def_rate,
          fgm_diff = wfgm-lfgm,
          fga_diff = wfga-lfga,
          fg3m_diff = wfgm3 - lfga3,
@@ -90,6 +104,20 @@ w_team_avg %>%
   aes(x = to, y = score, color = w_l) +
   geom_jitter()
 
+## Ken Pom Ratings Data ---------------------------------------------------------------------------
+
+kenpom = read_csv('C:\\RScripts\\minnemudac-2021\\Back End Data\\kenpom_ratings0321.csv') %>%
+  janitor::clean_names('snake') %>% 
+  filter(!str_detect(rk, 'R')) %>% 
+  mutate(team_clean = str_remove_all(team, '\\d') %>% 
+           str_remove_all('\\.') %>% 
+           str_remove_all('\\*') %>% 
+           str_replace_all(' St$| St ', ' State ') %>% 
+           str_trim()) %>% 
+  mutate(across(everything(), ~str_remove_all(.x, '\\+'))) %>% 
+  mutate(across(5:22, as.numeric)) %>% 
+  select(!ends_with('_sub'))
+
 ## Team Name, Conference, and Location ------------------------------------------------------------
 
 conferences = read_csv("C:\\RScripts\\minnemudac-2021\\Data\\MTeamConferences.csv") %>% 
@@ -106,32 +134,39 @@ conferences = read_csv("C:\\RScripts\\minnemudac-2021\\Data\\MTeamConferences.cs
                 mutate(team = str_replace_all(team, '&amp;', '&')), by = c('team_name2' = 'team')) %>% 
   left_join(., read_csv('C:\\RScripts\\minnemudac-2021\\Back End Data\\matched_names.csv'), 
             by = c('team_name2' = 'TeamName')) %>% 
-  left_join(., name_key, by = c(''))
-  mutate(sref_name = ifelse(is.na(link), team, team_name2))
+  mutate(sref_name = ifelse(is.na(link), team, team_name2)) %>% 
+  left_join(., name_key, by = c('sref_name' = 'scores'))
 
 # This file joins KenPom Names to Kaggle and Sports Ref
-name_key = read_csv('https://raw.githubusercontent.com/pjmartinkus/College_Basketball/master/Data/School_Names/schools.csv') %>% 
-  janitor::clean_names('snake')
+name_link = 'https://raw.githubusercontent.com/pjmartinkus/College_Basketball/master/Data/School_Names/schools.csv'
 
-test = conferences %>% 
+name_key = conferences %>% 
   select(team_id, team_name, sref_name) %>% 
   distinct() %>% 
-  left_join(., name_key, by = c('sref_name' = 'scores')) %>%
+  left_join(., read_csv(name_link) %>% 
+                  janitor::clean_names('snake'), 
+            by = c('sref_name' = 'scores')) %>%
   mutate(kenpom_t_rank = str_replace_all(kenpom_t_rank, '&amp;', '&')) %>% 
   mutate(name = ifelse(is.na(kenpom_t_rank), sref_name, kenpom_t_rank)) %>% 
   mutate(name = case_when(name == 'Tennessee-Martin' ~ 'Tennessee Martin',
                           name == 'Dixie State' ~ 'Dixie St.',
                           name == 'Tarleton State' ~ 'Tarleton St.',
+                          name == 'North Carolina St.' ~ 'N.C. State',
+                          name == 'UC-San Diego' ~ 'UC San Diego',
                           T ~ as.character(name))) %>% 
   left_join(., kenpom %>% 
-                select(team) %>% 
+                select(team, team_clean) %>% 
                 mutate(team = str_remove_all(team, '\\d') %>% 
                          str_remove_all('\\*') %>% 
                          str_trim()) %>% 
                 distinct(),
             by = c('name' = 'team'),
             keep = T) %>% 
-  arrange(!is.na(team))
+  arrange(!is.na(team)) %>% 
+  rename('kaggle_name' = 2,
+         'kenpom_name' = 7,
+         'kenpom_name_clean' = 8) %>% 
+  select(team_id, kaggle_name, sref_name, kenpom_name, kenpom_name_clean)
 
 conferences %>% 
   filter(is.na(sref_name)) %>% 
@@ -156,21 +191,48 @@ player_stats = read_csv('C:\\RScripts\\minnemudac-2021\\Back End Data\\player_st
   relocate(team, .before = player) %>% 
   relocate(season, .before = team) %>% 
   mutate(rsci_top_100 = str_remove_all(rsci_top_100, " \\(.*?\\)$") %>% as.numeric(),
-         rsci_top_100 = replace_na(rsci_top_100, 999))
+         rsci_top_100 = replace_na(rsci_top_100, 999)) %>% 
+  mutate(l_name = str_replace_all(player, '-', ' ') %>% 
+           str_remove_all('[^A-Za-z ]') %>% 
+           str_remove_all('Jr$') %>% 
+           str_remove_all('[A-Z]+$') %>% 
+           str_trim() %>% 
+           str_extract('\\b(\\w+)$')) %>% 
+  mutate(join = glue('{team}/{l_name}')) %>% 
+  left_join(., read_csv('C:\\RScripts\\minnemudac-2021\\Back End Data\\all_americans0320.csv') %>% 
+                janitor::clean_names('snake') %>% 
+                mutate(no = replace_na(no, 0)) %>% 
+                filter(no != 'No.') %>% 
+                mutate(college_of_choice = ifelse(str_detect(college_of_choice, 'not attend|Not Attend|Undecided'), 
+                                                  'No College', college_of_choice)) %>% 
+                mutate(college_of_choice = str_remove_all(college_of_choice, '\\[.*?\\]') %>% 
+                         str_remove_all('[^A-Za-z ]')) %>% 
+                mutate(college_of_choice = case_when(college_of_choice == 'Connecticut' ~ 'UConn',
+                                                     college_of_choice == 'North Carolina' ~ 'UNC',
+                                                     college_of_choice == 'North Carolina State' ~ 'NC State',
+                                                     college_of_choice == 'Pittsburgh' ~ 'Pitt',
+                                                     college_of_choice == "TexasEl Paso" ~ 'UTEP',
+                                                     str_detect(college_of_choice, 'Miami') ~ 'Miami (FL)',
+                                                     T ~ as.character(college_of_choice))) %>% 
+                mutate(l_name = str_replace_all(name, '-', ' ') %>% 
+                         str_remove_all('[^A-Za-z ]') %>% 
+                         str_remove_all('Jr$') %>% 
+                         str_remove_all('[A-Z]+$') %>% 
+                         str_trim() %>% 
+                         str_extract('\\b(\\w+)$')) %>% 
+                mutate(join = glue('{college_of_choice}/{l_name}')) %>% 
+                select(join) %>% 
+                mutate(all_american = 1), 
+            by = 'join') %>% 
+  mutate(all_american = replace_na(all_american, 0)) %>% 
+  distinct()
 
 team_level_player_stats = player_stats %>% 
+  mutate(team = str_replace_all(team, '&amp;', '&')) %>% 
+  mutate(team = case_when(team == 'Ole Miss' ~ 'Mississippi',
+                          T ~ as.character(team))) %>% 
   group_by(season, team) %>% 
   summarise(across(where(is.numeric), ~mean(.x, na.rm = T))) %>% 
-  # inner_join(., player_stats %>% 
-  #                 group_by(season, team) %>% 
-  #                 summarise(across(where(is.numeric), ~mean(.x, na.rm = T))) %>% 
-  #                 ungroup() %>% 
-  #                 group_by(team) %>% 
-  #                 summarise(across(where(is.numeric), cummean, .names = 'cum_{.col}')) %>% 
-  #                 filter(cum_season %% 1 == 0.5) %>% 
-  #                 mutate(cum_season = as.integer(cum_season + 0.5)) %>% 
-  #                 rename("season" = cum_season),
-  #            by = c('team', 'season')) %>%  # this is causing either multiple NAs or data to be cutoff at 2016
   left_join(., player_stats %>% 
                   select(season, team, player, class, gs) %>% 
                   group_by(season, team) %>% 
@@ -186,36 +248,49 @@ team_level_player_stats = player_stats %>%
                                            T ~ 'unknown_class')) %>% 
                   pivot_wider(names_from = class, values_from = n) %>% 
                   mutate(across(everything(), ~replace_na(.x, 0))),
-            by = c('team', 'season')) # bind this to `w_team_avg` once both are wrangled
+            by = c('team', 'season')) %>% 
+  left_join(., player_stats %>% 
+                group_by(team, season) %>% 
+                summarise(all_americans = sum(all_american)),
+            by = c('team', 'season')) %>% 
+  left_join(., name_key %>% 
+                select(sref_name, team_id), by = c('team' = 'sref_name')) %>% 
+  relocate(team_id, .before = team) %>% 
+  mutate(team_id = ifelse(team == 'UConn', 1163, team_id)) %>% 
+  relocate(all_americans, .after = team)   # bind this to `w_team_avg` once both are wrangled
+
+team_level_player_stats %>% 
+  ungroup() %>% 
+  filter(is.na(team_id)) %>% 
+  select(team) %>% 
+  distinct()
+
 team_level_player_stats %>% write_csv('C:\\RScripts\\minnemudac-2021\\Back End Data\\team_level_player_stats.csv')
 
-# McDonalds All Americans
+# McDonalds All Americans -------------------------------------------------------------------------
+
 mcdon = read_csv('C:\\RScripts\\minnemudac-2021\\Back End Data\\all_americans0320.csv') %>% 
   janitor::clean_names('snake') %>% 
   mutate(no = replace_na(no, 0)) %>% 
   filter(no != 'No.') %>% 
-  mutate(college_of_choice = ifelse(str_detect(college_of_choice, 'not attend|Not Attend'), 
+  mutate(college_of_choice = ifelse(str_detect(college_of_choice, 'not attend|Not Attend|Undecided'), 
                                     'No College', college_of_choice)) %>% 
   mutate(college_of_choice = str_remove_all(college_of_choice, '\\[.*?\\]') %>% 
-                             str_remove_all('[^A-Za-z ]'))
-
-test_mcd = player_stats %>% 
-  left_join(., mcdon %>% 
-                select(name, college_of_choice) %>% 
-                mutate(all_american = 1), 
-            by = c('player' = 'name')) %>% 
-  select(season, team, player, all_american)
-
-
-
-missing = mcdon %>% 
-  filter(!college_of_choice %in% c('No College', '')) %>% 
-  anti_join(., test_mcd %>% 
-                filter(all_american == 1) %>% 
-                ungroup() %>% 
-                select(player) %>% 
-                distinct(),
-            by = c('name' = 'player'))
+                             str_remove_all('[^A-Za-z ]')) %>% 
+  mutate(college_of_choice = case_when(college_of_choice == 'Connecticut' ~ 'UConn',
+                                       college_of_choice == 'North Carolina' ~ 'UNC',
+                                       college_of_choice == 'North Carolina State' ~ 'NC State',
+                                       college_of_choice == 'Pittsburgh' ~ 'Pitt',
+                                       college_of_choice == "TexasEl Paso" ~ 'UTEP',
+                                       str_detect(college_of_choice, 'Miami') ~ 'Miami (FL)',
+                                       T ~ as.character(college_of_choice))) %>% 
+  mutate(l_name = str_replace_all(name, '-', ' ') %>% 
+                  str_remove_all('[^A-Za-z ]') %>% 
+                  str_remove_all('Jr$') %>% 
+                  str_remove_all('[A-Z]+$') %>% 
+                  str_trim() %>% 
+                  str_extract('\\b(\\w+)$')) %>% 
+  mutate(join = glue('{college_of_choice}/{l_name}'))
 
 # Season Average Data For Missing Team/Season from Above
 
@@ -223,28 +298,8 @@ na_season_data = team_level_player_stats %>%
   group_by(season) %>% 
   summarise(across(where(is.numeric), ~mean(.x, na.rm = T)))
 
-## Ken Pom Ratings Data ---------------------------------------------------------------------------
 
-kenpom = read_csv('C:\\RScripts\\minnemudac-2021\\Back End Data\\kenpom_ratings0321.csv') %>%
-  janitor::clean_names('snake') %>% 
-  filter(!str_detect(rk, 'R')) %>% 
-  mutate(team_clean = str_remove_all(team, '\\d') %>% 
-                      str_remove_all('\\.') %>% 
-                      str_remove_all('\\*') %>% 
-                      str_replace_all(' St$| St ', ' State ') %>% 
-                      str_trim()) %>% 
-  mutate(across(everything(), ~str_remove_all(.x, '\\+'))) %>% 
-  mutate(across(5:22, as.numeric)) %>% 
-  select(!ends_with('_sub'))
-
-kp_names = kenpom %>% 
-  select(team) %>% 
-  mutate(team = str_remove_all(team, '\\d') %>% 
-           str_remove_all('\\*') %>% 
-           str_trim()) %>% 
-  distinct()
-
-sref_names = team_level_player_stats %>% 
-  ungroup() %>% 
-  select(team) %>% 
-  distinct()
+mcdon %>% 
+  select(college_of_choice) %>% 
+  distinct() %>% 
+  filter(!college_of_choice %in% name_key$sref_name)
