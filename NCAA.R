@@ -2,10 +2,10 @@ library(tidyverse)
 library(magrittr)
 library(glue)
 
-ncaa_results = read_csv("C:\\RScripts\\minnemudac-2021\\Data\\MNCAATourneyDetailedResults.csv") %>% 
+ncaa_results = read_csv("C:\\RScripts\\minnemudac-2021\\Data\\Kaggle Data\\MNCAATourneyDetailedResults.csv") %>% 
   janitor::clean_names('snake')
 
-reg_seas = read_csv("C:\\RScripts\\minnemudac-2021\\Data\\MRegularSeasonDetailedResults.csv") %>% 
+reg_seas = read_csv("C:\\RScripts\\minnemudac-2021\\Data\\Kaggle Data\\MRegularSeasonDetailedResults.csv") %>% 
   janitor::clean_names('snake') %>% 
   mutate(w_fg_pct = wfgm/wfga,
          w_fg3_pct = wfgm3/wfga3,
@@ -48,8 +48,8 @@ reg_seas = read_csv("C:\\RScripts\\minnemudac-2021\\Data\\MRegularSeasonDetailed
   mutate(across(ends_with('_diff'), ~case_when(.x > 0 ~ "W", .x < 0 ~ "L", T ~ "Tie"), .names = "greater_{.col}")) %>% 
   mutate(id = map(row_number(), uuid::UUIDgenerate) %>% as.character())
 
-locations = read_csv("C:\\RScripts\\minnemudac-2021\\Data\\MGameCities.csv") %>% 
-  inner_join(., read_csv('C:\\RScripts\\minnemudac-2021\\Data\\Cities.csv'), by = "CityID") %>% 
+locations = read_csv("C:\\RScripts\\minnemudac-2021\\Data\\Kaggle Data\\MGameCities.csv") %>% 
+  inner_join(., read_csv('C:\\RScripts\\minnemudac-2021\\Data\\Kaggle Data\\Cities.csv'), by = "CityID") %>% 
   janitor::clean_names('snake') %>% 
   mutate(city_st = glue("{city}, {state}") %>% as.character())
 
@@ -101,7 +101,7 @@ w_team_avg %>%
 
 ## Ken Pom Ratings Data ---------------------------------------------------------------------------
 
-kenpom = read_csv('C:\\RScripts\\minnemudac-2021\\Back End Data\\kenpom_ratings0321.csv') %>%
+kenpom = read_csv('C:\\RScripts\\minnemudac-2021\\Data\\Back End Data\\kenpom_ratings0321.csv') %>%
   janitor::clean_names('snake') %>% 
   filter(!str_detect(rk, 'R')) %>% 
   mutate(team_clean = str_remove_all(team, '\\d') %>% 
@@ -115,9 +115,9 @@ kenpom = read_csv('C:\\RScripts\\minnemudac-2021\\Back End Data\\kenpom_ratings0
 
 ## Team Name, Conference, and Location ------------------------------------------------------------
 
-conferences = read_csv("C:\\RScripts\\minnemudac-2021\\Data\\MTeamConferences.csv") %>% 
-  inner_join(., read_csv('C:\\RScripts\\minnemudac-2021\\Data\\Conferences.csv')) %>% 
-  inner_join(., read_csv('C:\\RScripts\\minnemudac-2021\\Data\\MTeams.csv')) %>% 
+conferences = read_csv("C:\\RScripts\\minnemudac-2021\\Data\\Kaggle Data\\MTeamConferences.csv") %>% 
+  inner_join(., read_csv('C:\\RScripts\\minnemudac-2021\\Data\\Kaggle Data\\Conferences.csv')) %>% 
+  inner_join(., read_csv('C:\\RScripts\\minnemudac-2021\\Data\\Kaggle Data\\MTeams.csv')) %>% 
   janitor::clean_names('snake') %>% 
   mutate(desc_clean = str_remove(description, 'Conference')) %>% 
   mutate(team_name2 = str_replace(team_name, 'Univ$', 'University') %>% 
@@ -125,9 +125,9 @@ conferences = read_csv("C:\\RScripts\\minnemudac-2021\\Data\\MTeamConferences.cs
                         str_replace('Stateate', 'State')) %>% 
   filter(last_d1season >= 2003) %>% 
   arrange(description) %>% 
-  left_join(., read_csv("C:\\RScripts\\minnemudac-2021\\Back End Data\\sports_reference_teams.csv") %>% 
+  left_join(., read_csv("C:\\RScripts\\minnemudac-2021\\Data\\Back End Data\\sports_reference_teams.csv") %>% 
                 mutate(team = str_replace_all(team, '&amp;', '&')), by = c('team_name2' = 'team')) %>% 
-  left_join(., read_csv('C:\\RScripts\\minnemudac-2021\\Back End Data\\matched_names.csv'), 
+  left_join(., read_csv('C:\\RScripts\\minnemudac-2021\\Data\\Back End Data\\matched_names.csv'), 
             by = c('team_name2' = 'TeamName')) %>% 
   mutate(sref_name = ifelse(is.na(link), team, team_name2)) %>% 
   left_join(., name_key, by = c('sref_name' = 'scores'))
@@ -200,8 +200,8 @@ na_kenpom = kenpom %>%
 
 ## Sports Reference Player Statistics -------------------------------------------------------------
 
-player_stats = read_csv('C:\\RScripts\\minnemudac-2021\\Back End Data\\player_stats_detail_0321.csv') %>% 
-  left_join(., read_csv('C:\\RScripts\\minnemudac-2021\\Back End Data\\player_stats_0321.csv'),
+player_stats = read_csv('C:\\RScripts\\minnemudac-2021\\Data\\Back End Data\\player_stats_detail_0321.csv') %>% 
+  left_join(., read_csv('C:\\RScripts\\minnemudac-2021\\Data\\Back End Data\\player_stats_0321.csv'),
             by = c('season' = 'year', 'team' = 'team', 'Player' = 'Player')) %>% 
   janitor::clean_names('snake') %>% 
   select(-rk) %>% 
@@ -224,7 +224,7 @@ player_stats = read_csv('C:\\RScripts\\minnemudac-2021\\Back End Data\\player_st
            str_trim() %>% 
            str_extract('\\b(\\w+)$')) %>% 
   mutate(join = glue('{team}/{l_name}')) %>% 
-  left_join(., read_csv('C:\\RScripts\\minnemudac-2021\\Back End Data\\all_americans0320.csv') %>% 
+  left_join(., read_csv('C:\\RScripts\\minnemudac-2021\\Data\\Back End Data\\all_americans0320.csv') %>% 
                 janitor::clean_names('snake') %>% 
                 mutate(no = replace_na(no, 0)) %>% 
                 filter(no != 'No.') %>% 
@@ -297,7 +297,14 @@ team_level_player_stats %>%
   select(team) %>% 
   distinct()
 
-team_level_player_stats %>% write_csv('C:\\RScripts\\minnemudac-2021\\Back End Data\\team_level_player_stats.csv')
+team_level_player_stats %>% write_csv('C:\\RScripts\\minnemudac-2021\\Data\\Back End Data\\team_level_player_stats.csv')
+
+# Season Average Data For Missing Team/Season from Above
+
+na_season_data = team_level_player_stats %>% 
+  group_by(season) %>% 
+  summarise(across(where(is.numeric), ~mean(.x, na.rm = T))) %>% 
+  mutate(all_americans = 0)
 
 # Season Average Data For Missing Team/Season from Above
 
@@ -308,7 +315,7 @@ na_season_data = team_level_player_stats %>%
 
 # McDonalds All Americans -------------------------------------------------------------------------
 
-mcdon = read_csv('C:\\RScripts\\minnemudac-2021\\Back End Data\\all_americans0320.csv') %>% 
+mcdon = read_csv('C:\\RScripts\\minnemudac-2021\\Data\\Back End Data\\all_americans0320.csv') %>% 
   janitor::clean_names('snake') %>% 
   mutate(no = replace_na(no, 0)) %>% 
   filter(no != 'No.') %>% 
@@ -376,3 +383,9 @@ team_stats = team_stats %>%
          rk = replace_na(rk, mean(rk, na.rm = T))) %>% 
   mutate(across(where(is.numeric), ~replace_na(.x, mean(.x, na.rm = T)))) %>% 
   select(-c(fga, fta, ast, stl, blk, pf))
+
+team_stats %>% write_csv('C:\\RScripts\\minnemudac-2021\\Data\\Final Output Data\\team_stats.csv')
+
+na_data = team_stats %>% 
+  ungroup() %>% 
+  summarise(across(everything(), ~sum(is.na(.x))))
