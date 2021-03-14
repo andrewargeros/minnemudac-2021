@@ -306,6 +306,13 @@ na_season_data = team_level_player_stats %>%
   summarise(across(where(is.numeric), ~mean(.x, na.rm = T))) %>% 
   mutate(all_americans = 0)
 
+# Season Average Data For Missing Team/Season from Above
+
+na_season_data = team_level_player_stats %>% 
+  group_by(season) %>% 
+  summarise(across(where(is.numeric), ~mean(.x, na.rm = T))) %>% 
+  mutate(all_americans = 0)
+
 # McDonalds All Americans -------------------------------------------------------------------------
 
 mcdon = read_csv('C:\\RScripts\\minnemudac-2021\\Data\\Back End Data\\all_americans0320.csv') %>% 
