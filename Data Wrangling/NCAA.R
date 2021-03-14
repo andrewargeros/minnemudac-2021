@@ -72,7 +72,7 @@ w_team_avg = reg_seas %>%
   relocate(id, .before = season) %>% 
   relocate(w_l, .before = team_id) %>% 
   arrange(id) %>% 
-  inner_join(., reg_seas %>% 
+  left_join(., reg_seas %>% 
                  select(id, w_team_id, l_team_id, season, day_num) %>% 
                  inner_join(., locations) %>% 
                  select(!c(w_team_id, l_team_id, season, day_num)), by = "id") %>% 
@@ -129,8 +129,7 @@ conferences = read_csv("C:\\RScripts\\minnemudac-2021\\Data\\Kaggle Data\\MTeamC
                 mutate(team = str_replace_all(team, '&amp;', '&')), by = c('team_name2' = 'team')) %>% 
   left_join(., read_csv('C:\\RScripts\\minnemudac-2021\\Data\\Back End Data\\matched_names.csv'), 
             by = c('team_name2' = 'TeamName')) %>% 
-  mutate(sref_name = ifelse(is.na(link), team, team_name2)) %>% 
-  left_join(., name_key, by = c('sref_name' = 'scores'))
+  mutate(sref_name = ifelse(is.na(link), team, team_name2))
 
 # This file joins KenPom Names to Kaggle and Sports Ref
 name_link = 'https://raw.githubusercontent.com/pjmartinkus/College_Basketball/master/Data/Resources/schools.csv'
@@ -382,10 +381,12 @@ team_stats = team_stats %>%
          rk = as.numeric(rk),
          rk = replace_na(rk, mean(rk, na.rm = T))) %>% 
   mutate(across(where(is.numeric), ~replace_na(.x, mean(.x, na.rm = T)))) %>% 
-  select(-c(fga, fta, ast, stl, blk, pf))
+  select(-c(fga, fta, ast, stl, blk, pf, city_id)) %>% 
+  select(-ends_with('.y'))
 
 team_stats %>% write_csv('C:\\RScripts\\minnemudac-2021\\Data\\Final Output Data\\team_stats.csv')
 
 na_data = team_stats %>% 
   ungroup() %>% 
   summarise(across(everything(), ~sum(is.na(.x))))
+
