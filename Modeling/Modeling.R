@@ -41,6 +41,8 @@ split = not_valid %>% initial_split(prop = 0.8)
 train = training(split)
 test = testing(split)
 
+splits = vfold_cv(train, v = 5)
+
 ## Create Model Recipe ----------------------------------------------------------------------------
 
 model_recipe = recipe(winner ~ ., data = train) %>% 
@@ -54,7 +56,21 @@ model_recipe = recipe(winner ~ ., data = train) %>%
   
 ## Model Attempt ------------------------------------------------------------------------------
 
-rf_model = rand_forest(mtry = 75, trees = 20000) %>% 
+# rf_model_grid = rand_forest(mtry = tune(), trees = 2000) %>% 
+#   set_engine("ranger", importance = 'impurity') %>% 
+#   set_mode("classification")
+# 
+# wf_grid = workflow() %>% 
+#   add_model(rf_model_grid) %>% 
+#   add_recipe(model_recipe)
+# 
+# grid_model = tune_grid(wf_grid, 
+#                        resamples = splits, 
+#                        control = control_resamples(save_pred = TRUE), 
+#                        grid = 10) %>% 
+#   show_best('accuracy', n = 1)
+
+rf_model = rand_forest(mtry = 80, trees = 20000) %>% 
   set_engine("ranger", importance = 'impurity') %>% 
   set_mode("classification")
 
@@ -63,6 +79,16 @@ wf = workflow() %>%
   add_recipe(model_recipe)
 
 model_fit = wf %>% fit(train)
+
+model_fit %>% 
+  predict(test) %>% 
+  bind_cols(test %>% select(game_round, team_1_id, team_1_seed_num,
+                            team_2_id, team_2_seed_num, winner)) %>% 
+  mutate(correct = ifelse(winner == `.pred_class`, 1, 0)) %>% 
+  group_by(correct) %>% 
+  summarise(n = n()) %>% 
+  ungroup() %>%
+  mutate(n_pct = n/sum(n))
 
 model_fit %>% 
   predict(test) %>% 
@@ -91,3 +117,26 @@ pull_workflow_fit(model_fit)$fit$variable.importance %>%
        x = "Relative Importance",
        y = "Variable") +
   theme(legend.position = 'none')
+
+model_fit = wf %>% fit(not_valid)
+
+model_fit %>% 
+  predict(valid) %>% 
+  bind_cols(valid %>% select(game_round, team_1_id, team_1_seed_num,
+                            team_2_id, team_2_seed_num, winner)) %>% 
+  mutate(correct = ifelse(winner == `.pred_class`, 1, 0)) %>% 
+  group_by(correct) %>% 
+  summarise(n = n()) %>% 
+  ungroup() %>%
+  mutate(n_pct = n/sum(n))
+
+model_fit %>% 
+  predict(valid) %>% 
+  bind_cols(valid %>% select(game_round, team_1_id, team_1_seed_num,
+                            team_2_id, team_2_seed_num, winner)) %>% 
+  mutate(correct = ifelse(winner == `.pred_class`, 1, 0),
+         upset = case_when(winner == 'team_1' & team_1_seed_num > team_2_seed_num ~ 1,
+                           winner == 'team_2' & team_2_seed_num > team_1_seed_num ~ 1,
+                           T ~ 0)) %>% 
+  filter(upset == 1) %>% 
+  arrange(correct)
