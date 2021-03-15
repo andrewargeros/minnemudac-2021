@@ -66,12 +66,16 @@ model_fit = wf %>% fit(train)
 
 model_fit %>% 
   predict(test) %>% 
-  bind_cols(test %>% select(game_round, team_1_id, team_2_id, winner)) %>% 
-  mutate(correct = ifelse(winner == `.pred_class`, 1, 0)) %>% 
-  group_by(game_round, correct) %>% 
+  bind_cols(test %>% select(game_round, team_1_id, team_1_seed_num,
+                            team_2_id, team_2_seed_num, winner)) %>% 
+  mutate(correct = ifelse(winner == `.pred_class`, 1, 0),
+         upset = case_when(winner == 'team_1' & team_1_seed_num > team_2_seed_num ~ 1,
+                           winner == 'team_2' & team_2_seed_num > team_1_seed_num ~ 1,
+                           T ~ 0)) %>% 
+  group_by(upset, correct) %>% 
   summarise(n = n()) %>% 
   ungroup() %>% 
-  group_by(game_round) %>% 
+  group_by(upset) %>%
   mutate(n_pct = n/sum(n))
 
 pull_workflow_fit(model_fit)$fit$variable.importance %>% 
