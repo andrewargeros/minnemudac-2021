@@ -1,5 +1,7 @@
 library(tidyverse)
 library(tidymodels)
+library(themis)
+library(kknn)
 library(glue)
 
 ## Data Loading and Munging -----------------------------------------------------------------------
@@ -52,9 +54,9 @@ model_recipe = recipe(winner ~ ., data = train) %>%
   step_scale(all_numeric(), -all_outcomes()) %>%
   prep(train, retain = T)
   
-## Model Attempt ------------------------------------------------------------------------------
+## Model Attempt ----------------------------------------------------------------------------------
 
-rf_model = rand_forest(mtry = 75, trees = 20000) %>% 
+rf_model = rand_forest(mtry = 80, trees = 20000) %>% 
   set_engine("ranger", importance = 'impurity') %>% 
   set_mode("classification")
 
@@ -63,6 +65,18 @@ wf = workflow() %>%
   add_recipe(model_recipe)
 
 model_fit = wf %>% fit(train)
+
+## Evaluation -------------------------------------------------------------------------------------
+
+model_fit %>% 
+  predict(test) %>% 
+  bind_cols(test %>% select(game_round, team_1_id, team_1_seed_num,
+                            team_2_id, team_2_seed_num, winner)) %>% 
+  mutate(correct = ifelse(winner == `.pred_class`, 1, 0)) %>% 
+  group_by(correct) %>% 
+  summarise(n = n()) %>% 
+  ungroup() %>%
+  mutate(n_pct = n/sum(n))
 
 model_fit %>% 
   predict(test) %>% 
@@ -78,6 +92,8 @@ model_fit %>%
   group_by(upset) %>%
   mutate(n_pct = n/sum(n))
 
+## Variable Importance ----------------------------------------------------------------------------
+
 pull_workflow_fit(model_fit)$fit$variable.importance %>% 
   enframe() %>% 
   arrange(desc(value)) %>% 
@@ -91,3 +107,94 @@ pull_workflow_fit(model_fit)$fit$variable.importance %>%
        x = "Relative Importance",
        y = "Variable") +
   theme(legend.position = 'none')
+
+## Fit to Second Stage Data -----------------------------------------------------------------------
+
+model_fit = wf %>% fit(not_valid)
+
+model_fit %>% 
+  predict(valid) %>% 
+  bind_cols(valid %>% select(game_round, team_1_id, team_1_seed_num,
+                            team_2_id, team_2_seed_num, winner)) %>% 
+  mutate(correct = ifelse(winner == `.pred_class`, 1, 0)) %>% 
+  group_by(correct) %>% 
+  summarise(n = n()) %>% 
+  ungroup() %>%
+  mutate(n_pct = n/sum(n))
+
+model_fit %>% 
+  predict(valid) %>% 
+  bind_cols(valid %>% select(game_round, team_1_id, team_1_seed_num,
+                            team_2_id, team_2_seed_num, winner)) %>% 
+  mutate(correct = ifelse(winner == `.pred_class`, 1, 0),
+         upset = case_when(winner == 'team_1' & team_1_seed_num > team_2_seed_num ~ 1,
+                           winner == 'team_2' & team_2_seed_num > team_1_seed_num ~ 1,
+                           T ~ 0)) %>% 
+  filter(upset == 1) %>% 
+  arrange(correct)
+
+## Upset Prediction Model -------------------------------------------------------------------------
+
+upset = data %>% 
+  mutate(up = case_when(winner == 'team_1' & team_1_seed_num > team_2_seed_num ~ 'UPSET',
+                           winner == 'team_2' & team_2_seed_num > team_1_seed_num ~ 'UPSET',
+                           T ~ 'NORMAL') %>% as.factor()) %>% 
+  select(-winner) %>% 
+  mutate_if(is.character, factor)
+
+## Data Partitioning ------------------------------------------------------------------------------
+
+not_valid = upset %>% filter(season < 2019)
+valid = upset %>% filter(season == 2019) # Save 2019 Bracket as Final Validation
+
+split = not_valid %>% initial_split(prop = 0.8)
+train = training(split)
+test = testing(split)
+
+## Model Recipe -----------------------------------------------------------------------------------
+
+upset_recipe = recipe(up ~ ., data = train) %>% 
+  update_role(team_1_id, new_role = 'ID') %>% 
+  update_role(team_2_id, new_role = 'ID') %>%
+  update_role(game_slot, new_role = 'ID') %>%
+  step_knnimpute(all_predictors()) %>%
+  step_center(all_numeric(), -all_outcomes()) %>%
+  step_scale(all_numeric(), -all_outcomes()) %>%
+  step_upsample(up) %>%
+  prep(train, retain = T)
+
+## Modeling ----------------------------------------------------------------------------------------
+
+knn = nearest_neighbor(neighbors = 80) %>% 
+  set_engine('kknn') %>% 
+  set_mode('classification')
+
+wf_up = workflow() %>% 
+  add_model(knn) %>% 
+  add_recipe(upset_recipe)
+
+upset_fit = wf_up %>% fit(train)
+
+upset_fit %>% 
+  predict(test) %>% 
+  bind_cols(test %>% select(game_round, team_1_id, team_1_seed_num,
+                            team_2_id, team_2_seed_num, up)) %>% 
+  mutate(correct = ifelse(up == `.pred_class`, 1, 0)) %>% 
+  group_by(up, correct) %>% 
+  summarise(n = n()) %>% 
+  ungroup() %>%
+  group_by(up) %>% 
+  mutate(n_pct = n/sum(n))
+
+upset_fit = wf_up %>% fit(not_valid)
+
+upset_fit %>% 
+  predict(valid) %>% 
+  bind_cols(valid %>% select(game_round, team_1_id, team_1_seed_num,
+                            team_2_id, team_2_seed_num, up)) %>% 
+  mutate(correct = ifelse(up == `.pred_class`, 1, 0)) %>% 
+  group_by(up, correct) %>% 
+  summarise(n = n()) %>% 
+  ungroup() %>%
+  group_by(up) %>% 
+  mutate(n_pct = n/sum(n))
