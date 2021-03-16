@@ -14,11 +14,18 @@ upsets_1 = ncaa %>%
   group_by(round, win_seed) %>% 
   summarise(upsets = n()) %>% 
   mutate(upset_prob = upsets/140) %>% 
-  mutate(game_no = c(1:8,8:1)) 
+  mutate(game_no = 16:1) %>% 
+  mutate(ev = ifelse(win_seed > 8, upset_prob*(1+win_seed-game_no), upset_prob))
 
-upsets_1 %<>% 
+upsets_2 = upsets_1 %>% 
   filter(win_seed <= 8) %>% 
   inner_join(., upsets_1 %>% filter(win_seed > 8), by = 'game_no')
+
+ncaa %>% 
+  filter(round == 2) %>% 
+  filter(win_seed == 12 | lose_seed == 12) %>% 
+  group_by(win_seed) %>% 
+  summarise(n())
 
 high_seed = 8
 

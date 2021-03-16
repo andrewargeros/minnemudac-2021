@@ -1,5 +1,6 @@
 library(tidyverse)
 library(tidymodels)
+library(magrittr)
 library(themis)
 library(kknn)
 library(glue)
@@ -57,7 +58,7 @@ model_recipe = recipe(winner ~ ., data = train) %>%
 ## Model Attempt ----------------------------------------------------------------------------------
 
 rf_model = rand_forest(mtry = 80, trees = 20000) %>% 
-  set_engine("ranger", importance = 'impurity') %>% 
+  set_engine("randomForest") %>% 
   set_mode("classification")
 
 wf = workflow() %>% 
@@ -65,6 +66,50 @@ wf = workflow() %>%
   add_recipe(model_recipe)
 
 model_fit = wf %>% fit(train)
+
+random_predict = function(model, new_data, n){
+  preds = tibble()
+  for (row in 1:nrow(new_data)){
+    
+    dat = new_data %>% filter(row_number() == row)
+    
+    all = model %>% predict(dat, 
+                            type = 'raw', 
+                            opts = list(predict.all = T))
+    
+    s = all$individual %>% 
+      t() %>% 
+      as_tibble() %>% 
+      rename('pred' = 1) %$% 
+      sample(pred, n, replace = T) %>% 
+      as_tibble() %>% 
+      group_by(value) %>% 
+      summarise(p = n(), .groups = 'drop') %>% 
+      filter(p == max(p)) %>% 
+      select(value) 
+    
+    preds %<>% bind_rows(s)
+      
+  }
+  return(preds)
+}
+
+preds = model_fit %>% 
+  random_predict(test, 15) %>% 
+  bind_cols(model_fit %>% predict(test)) %>% 
+  bind_cols(test %>% select(winner, team_1_seed_num, team_2_seed_num, season)) %>% 
+  rename('boot' = 1, 'full' = 2, 'actual' = 3) %>% 
+  transform(boot = as.factor(boot)) %>% 
+  mutate(upset = case_when(actual == 'team_1' & team_1_seed_num > team_2_seed_num ~ 1,
+                           actual == 'team_2' & team_2_seed_num > team_1_seed_num ~ 1,
+                           T ~ 0)) %>% 
+  mutate(boot_acc = ifelse(boot == actual, "RIGHT", "WRONG"),
+         full_acc = ifelse(full == actual, "RIGHT", "WRONG"))
+
+preds %>% 
+  group_by(upset, boot_acc, full_acc) %>% 
+  summarise(n = n())
+
 
 ## Evaluation -------------------------------------------------------------------------------------
 
@@ -137,9 +182,9 @@ model_fit %>%
 
 upset = data %>% 
   mutate(up = case_when(winner == 'team_1' & team_1_seed_num > team_2_seed_num ~ 'UPSET',
-                           winner == 'team_2' & team_2_seed_num > team_1_seed_num ~ 'UPSET',
-                           T ~ 'NORMAL') %>% as.factor()) %>% 
-  select(-winner) %>% 
+                         winner == 'team_2' & team_2_seed_num > team_1_seed_num ~ 'UPSET',
+                         T ~ 'NORMAL') %>% as.factor()) %>% 
+select(-winner) %>% 
   mutate_if(is.character, factor)
 
 ## Data Partitioning ------------------------------------------------------------------------------
@@ -160,12 +205,13 @@ upset_recipe = recipe(up ~ ., data = train) %>%
   step_knnimpute(all_predictors()) %>%
   step_center(all_numeric(), -all_outcomes()) %>%
   step_scale(all_numeric(), -all_outcomes()) %>%
-  step_upsample(up) %>%
+  step_rm(seed_diff, seed_diff_log, seed_diff_sqrt) %>% 
+  step_upsample(up, over_ratio = 1) %>%
   prep(train, retain = T)
 
 ## Modeling ----------------------------------------------------------------------------------------
 
-knn = nearest_neighbor(neighbors = 80) %>% 
+knn = nearest_neighbor(neighbors = 80, dist_power = 2) %>% 
   set_engine('kknn') %>% 
   set_mode('classification')
 
@@ -174,6 +220,16 @@ wf_up = workflow() %>%
   add_recipe(upset_recipe)
 
 upset_fit = wf_up %>% fit(train)
+
+upset_fit %>% 
+  predict(test) %>% 
+  bind_cols(test %>% select(game_round, team_1_id, team_1_seed_num,
+                            team_2_id, team_2_seed_num, up)) %>% 
+  mutate(correct = ifelse(up == `.pred_class`, 1, 0)) %>% 
+  group_by(correct) %>% 
+  summarise(n = n()) %>% 
+  ungroup() %>%
+  mutate(n_pct = n/sum(n))
 
 upset_fit %>% 
   predict(test) %>% 
