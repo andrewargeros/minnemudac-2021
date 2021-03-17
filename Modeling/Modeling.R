@@ -67,6 +67,8 @@ wf = workflow() %>%
 
 model_fit = wf %>% fit(train)
 
+## Evaluation -------------------------------------------------------------------------------------
+
 random_predict = function(model, new_data, n){
   preds = tibble()
   for (row in 1:nrow(new_data)){
@@ -89,7 +91,7 @@ random_predict = function(model, new_data, n){
       select(value) 
     
     preds %<>% bind_rows(s)
-      
+    
   }
   return(preds)
 }
@@ -109,9 +111,6 @@ preds = model_fit %>%
 preds %>% 
   group_by(upset, boot_acc, full_acc) %>% 
   summarise(n = n())
-
-
-## Evaluation -------------------------------------------------------------------------------------
 
 model_fit %>% 
   predict(test) %>% 
@@ -202,21 +201,29 @@ upset_recipe = recipe(up ~ ., data = train) %>%
   update_role(team_1_id, new_role = 'ID') %>% 
   update_role(team_2_id, new_role = 'ID') %>%
   update_role(game_slot, new_role = 'ID') %>%
+  update_role(region, new_role = 'ID') %>%
+  step_rm(seed_diff, seed_diff_log, seed_diff_sqrt) %>% 
+  # step_zv(all_predictors()) %>% 
+  # step_lincomb(all_predictors()) %>% 
   step_knnimpute(all_predictors()) %>%
   step_center(all_numeric(), -all_outcomes()) %>%
   step_scale(all_numeric(), -all_outcomes()) %>%
-  step_rm(seed_diff, seed_diff_log, seed_diff_sqrt) %>% 
-  step_upsample(up, over_ratio = 1) %>%
+  step_smote(up, over_ratio = 4) %>%
   prep(train, retain = T)
 
 ## Modeling ----------------------------------------------------------------------------------------
 
-knn = nearest_neighbor(neighbors = 80, dist_power = 2) %>% 
-  set_engine('kknn') %>% 
-  set_mode('classification')
+svm_mod = svm_rbf(cost = tune(), rbf_sigma = tune()) %>%
+  set_mode("classification") %>%
+  set_engine("kernlab")
+
+svm_grid = svm_mod %>% tune_grid(upset_recipe,
+                                 resamples = bootstraps(train),
+                                 metrics = metric_set(roc_auc),
+                                 ctrl = cotrol_grid(verbose = T, save_pred = T))
 
 wf_up = workflow() %>% 
-  add_model(knn) %>% 
+  add_model(rf_model) %>% 
   add_recipe(upset_recipe)
 
 upset_fit = wf_up %>% fit(train)
@@ -254,3 +261,4 @@ upset_fit %>%
   ungroup() %>%
   group_by(up) %>% 
   mutate(n_pct = n/sum(n))
+
