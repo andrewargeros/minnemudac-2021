@@ -33,7 +33,11 @@ data = games %>%
   mutate(across(ends_with('_log'), ~replace_na(.x, 0)),
          across(ends_with('_sqrt'), ~replace_na(.x, 0))) %>%
   mutate(across(everything(), ~replace_na(.x, 0))) %>% 
-  transform(winner = as.factor(winner))
+  transform(winner = as.factor(winner)) %>% 
+  mutate(up = case_when(winner == 'team_1' & team_1_seed_num > team_2_seed_num ~ 'UPSET',
+                        winner == 'team_2' & team_2_seed_num > team_1_seed_num ~ 'UPSET',
+                        T ~ 'NORMAL') %>% as.factor()) %>%
+  mutate_if(is.character, factor)
 
 ## Data Partitioning ------------------------------------------------------------------------------
 
@@ -47,6 +51,7 @@ test = testing(split)
 ## Create Model Recipe ----------------------------------------------------------------------------
 
 model_recipe = recipe(winner ~ ., data = train) %>% 
+  step_rm(up) %>% 
   update_role(team_1_id, new_role = 'ID') %>% 
   update_role(team_2_id, new_role = 'ID') %>%
   update_role(game_slot, new_role = 'ID') %>%
@@ -99,18 +104,13 @@ random_predict = function(model, new_data, n){
 preds = model_fit %>% 
   random_predict(test, 15) %>% 
   bind_cols(model_fit %>% predict(test)) %>% 
-  bind_cols(test %>% select(winner, team_1_seed_num, team_2_seed_num, season)) %>% 
-  rename('boot' = 1, 'full' = 2, 'actual' = 3) %>% 
+  bind_cols(model_fit %>% predict(test, type = 'prob')) %>% 
+  select(-`.pred_team_2`) %>% 
+  rename('boot' = 1, 'full' = 2, 'rf_prob_team_1' = 3) %>% 
+  bind_cols(test %>% select(winner, team_1_seed_num, team_2_seed_num, season, game_round, up)) %>% 
   transform(boot = as.factor(boot)) %>% 
-  mutate(upset = case_when(actual == 'team_1' & team_1_seed_num > team_2_seed_num ~ 1,
-                           actual == 'team_2' & team_2_seed_num > team_1_seed_num ~ 1,
-                           T ~ 0)) %>% 
-  mutate(boot_acc = ifelse(boot == actual, "RIGHT", "WRONG"),
-         full_acc = ifelse(full == actual, "RIGHT", "WRONG"))
-
-preds %>% 
-  group_by(upset, boot_acc, full_acc) %>% 
-  summarise(n = n())
+  mutate(boot_acc = ifelse(boot == winner, "RIGHT", "WRONG"),
+         full_acc = ifelse(full == winner, "RIGHT", "WRONG"))
 
 model_fit %>% 
   predict(test) %>% 
@@ -179,22 +179,6 @@ model_fit %>%
 
 ## Upset Prediction Model -------------------------------------------------------------------------
 
-upset = data %>% 
-  mutate(up = case_when(winner == 'team_1' & team_1_seed_num > team_2_seed_num ~ 'UPSET',
-                         winner == 'team_2' & team_2_seed_num > team_1_seed_num ~ 'UPSET',
-                         T ~ 'NORMAL') %>% as.factor()) %>% 
-select(-winner) %>% 
-  mutate_if(is.character, factor)
-
-## Data Partitioning ------------------------------------------------------------------------------
-
-not_valid = upset %>% filter(season < 2019)
-valid = upset %>% filter(season == 2019) # Save 2019 Bracket as Final Validation
-
-split = not_valid %>% initial_split(prop = 0.8)
-train = training(split)
-test = testing(split)
-
 ## Model Recipe -----------------------------------------------------------------------------------
 
 upset_recipe = recipe(up ~ ., data = train) %>% 
@@ -202,28 +186,23 @@ upset_recipe = recipe(up ~ ., data = train) %>%
   update_role(team_2_id, new_role = 'ID') %>%
   update_role(game_slot, new_role = 'ID') %>%
   update_role(region, new_role = 'ID') %>%
-  step_rm(seed_diff, seed_diff_log, seed_diff_sqrt) %>% 
-  # step_zv(all_predictors()) %>% 
-  # step_lincomb(all_predictors()) %>% 
+  step_rm(seed_diff, seed_diff_log, seed_diff_sqrt, winner) %>% 
+  # step_zv(all_predictors()) %>%
+  # step_lincomb(all_predictors()) %>%
   step_knnimpute(all_predictors()) %>%
   step_center(all_numeric(), -all_outcomes()) %>%
   step_scale(all_numeric(), -all_outcomes()) %>%
-  step_smote(up, over_ratio = 4) %>%
+  step_smote(up, over_ratio = 1) %>%
   prep(train, retain = T)
 
 ## Modeling ----------------------------------------------------------------------------------------
 
-svm_mod = svm_rbf(cost = tune(), rbf_sigma = tune()) %>%
-  set_mode("classification") %>%
-  set_engine("kernlab")
-
-svm_grid = svm_mod %>% tune_grid(upset_recipe,
-                                 resamples = bootstraps(train),
-                                 metrics = metric_set(roc_auc),
-                                 ctrl = cotrol_grid(verbose = T, save_pred = T))
+knn_mod = nearest_neighbor(neighbors = 65) %>% 
+  set_engine('kknn') %>% 
+  set_mode('classification')
 
 wf_up = workflow() %>% 
-  add_model(rf_model) %>% 
+  add_model(knn_mod) %>% 
   add_recipe(upset_recipe)
 
 upset_fit = wf_up %>% fit(train)
@@ -262,3 +241,94 @@ upset_fit %>%
   group_by(up) %>% 
   mutate(n_pct = n/sum(n))
 
+upset_fit %>% 
+  predict(valid, type = 'prob') %>%
+  bind_cols(upset_fit %>% predict(valid)) %>% 
+  bind_cols(valid %>% select(winner, up, team_1_seed_num, team_2_seed_num)) %>% 
+  mutate(knn_pred = case_when(`.pred_class` == 'UPSET' & team_1_seed_num > team_2_seed_num ~ 'team_1',
+                              `.pred_class` == 'UPSET' & team_2_seed_num >= team_1_seed_num ~ 'team_2',
+                              `.pred_class` == 'NORMAL' & team_1_seed_num > team_2_seed_num ~ 'team_2',
+                              `.pred_class` == 'NORMAL' & team_2_seed_num >= team_1_seed_num ~ 'team_1'),
+         knn_team_1_prob = ifelse(`.pred_class` == 'UPSET' & knn_pred == 'team_1', `.pred_UPSET`, `.pred_NORMAL`)) %>% 
+  select(knn_pred, knn_team_1_prob)
+
+## Ensemble Model ---------------------------------------------------------------------------------
+df = model_fit %>% 
+  random_predict(not_valid, 15) %>% 
+  bind_cols(model_fit %>% predict(not_valid)) %>% 
+  bind_cols(model_fit %>% predict(not_valid, type = 'prob')) %>% 
+  rename('boot' = 1, 
+         'full' = 2, 
+         'rf_prob_team_1' = 3,
+         'rf_prob_team_2' = 4) %>% 
+  mutate(certainty = ifelse(full == 'team_1', rf_prob_team_1, rf_prob_team_2)) %>% 
+  select(-c(rf_prob_team_1, rf_prob_team_2)) %>% 
+  bind_cols(upset_fit %>% 
+              predict(not_valid, type = 'prob') %>%
+              bind_cols(upset_fit %>% predict(not_valid)) %>% 
+              bind_cols(not_valid %>% select(winner, up, team_1_seed_num, team_2_seed_num)) %>% 
+              mutate(knn_pred = case_when(`.pred_class` == 'UPSET' & team_1_seed_num > team_2_seed_num ~ 'team_1',
+                                          `.pred_class` == 'UPSET' & team_2_seed_num >= team_1_seed_num ~ 'team_2',
+                                          `.pred_class` == 'NORMAL' & team_1_seed_num > team_2_seed_num ~ 'team_2',
+                                          `.pred_class` == 'NORMAL' & team_2_seed_num >= team_1_seed_num ~ 'team_1'),
+                     knn_certainty = ifelse(`.pred_class` == 'NORMAL', `.pred_NORMAL`, `.pred_UPSET`)) %>% 
+              select(knn_pred, knn_certainty)) %>% 
+  mutate_if(is.character, factor) %>% 
+  bind_cols(not_valid %>% select(winner, team_1_id, team_2_id, up))
+
+ens_rec = recipe(winner ~ ., data = df) %>% 
+  update_role(ends_with('_id'), new_role = "ID") %>% 
+  update_role(up, new_role = "ID") %>% 
+  step_dummy(all_nominal(), -all_outcomes()) %>% 
+  prep(df, retain = T)
+
+model = decision_tree() %>% 
+  set_mode('classification') %>% 
+  set_engine('rpart')
+
+ens_wf = workflow() %>% 
+  add_model(model) %>% 
+  add_recipe(ens_rec)
+
+final_mod = ens_wf %>% fit(df)
+
+f = model_fit %>% 
+  random_predict(valid, 15) %>% 
+  bind_cols(model_fit %>% predict(valid)) %>% 
+  bind_cols(model_fit %>% predict(valid, type = 'prob')) %>% 
+  rename('boot' = 1, 
+         'full' = 2, 
+         'rf_prob_team_1' = 3,
+         'rf_prob_team_2' = 4) %>% 
+  mutate(certainty = ifelse(full == 'team_1', rf_prob_team_1, rf_prob_team_2)) %>% 
+  select(-c(rf_prob_team_1, rf_prob_team_2)) %>% 
+  bind_cols(upset_fit %>% 
+              predict(valid, type = 'prob') %>%
+              bind_cols(upset_fit %>% predict(valid)) %>% 
+              bind_cols(valid %>% select(winner, up, team_1_seed_num, team_2_seed_num)) %>% 
+              mutate(knn_pred = case_when(`.pred_class` == 'UPSET' & team_1_seed_num > team_2_seed_num ~ 'team_1',
+                                          `.pred_class` == 'UPSET' & team_2_seed_num >= team_1_seed_num ~ 'team_2',
+                                          `.pred_class` == 'NORMAL' & team_1_seed_num > team_2_seed_num ~ 'team_2',
+                                          `.pred_class` == 'NORMAL' & team_2_seed_num >= team_1_seed_num ~ 'team_1'),
+                     knn_certainty = ifelse(`.pred_class` == 'NORMAL', `.pred_NORMAL`, `.pred_UPSET`)) %>% 
+              select(knn_pred, knn_certainty)) %>% 
+  mutate_if(is.character, factor) %>% 
+  bind_cols(valid %>% select(winner, team_1_id, team_2_id, up))
+
+final_mod %>% 
+  predict(f) %>% 
+  bind_cols(f %>% select(winner)) %>% 
+  mutate(n = ifelse(`.pred_class` == winner, 1,0)) %>% 
+  group_by(n) %>% 
+  summarise(n())
+
+
+## Refit Models and Save --------------------------------------------------------------------------
+
+wf %>%
+  fit(data) %>% 
+  write_rds('C:\\RScripts\\minnemudac-2021\\Models\\model_step_1.rds')
+
+wf_up %>%
+  fit(data) %>% 
+  write_rds('C:\\RScripts\\minnemudac-2021\\Models\\model_step_2.rds')
