@@ -30,7 +30,18 @@ Additionally, we pulled in location, ranking, and player data for each team list
 
 To predict the outcomes of games, we used two models. The first was a random forests based model, trained to predict `team_1` or `team_2`. The ordering of the teams was changed this way for its data quality. The team listed in the data as `team_1`, was determined by the odd/evenness of the `w_team_id`.
 
-To predict, we used the underlying `predict.all = TRUE`, argument to bootstrap individual tree predictions, so as to create a more stochastic process, better simulating the randomness of the tournament. We additionally calculated the "probability", based on the voting breakdown of the model's trees. 
+To predict, we used the underlying `predict.all = TRUE`, argument to bootstrap individual tree predictions, so as to create a more stochastic process, better simulating the randomness of the tournament. We additionally calculated the "probability", based on the voting breakdown of the model's trees.
+
+## Final Bracket
+
+Our bracket finished 19th in the overall competition, and in the 89th percentile of ESPN's Tournament challenge, giving Andrew a 2nd place finish in his family pool. One thing to note is the MinneMUDAC scoring system, which gave an incentive to picking upsets.
+
+##### By Round:
+- **Sweet Sixteen**: 6/16
+- **Elight Eight**: 4/8
+- **Final Four**: 3/4
+
+![](https://github.com/andrewargeros/minnemudac-2021/blob/main/Bracket/final_bracket.png?raw=true)
 
 
 
