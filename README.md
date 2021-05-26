@@ -56,6 +56,6 @@ Our bracket finished 19th in the overall competition, and in the 89th percentile
 
 
 
-
+ 
 [HU]: hamline.edu
 [MM]: https://www.ncaa.com/news/basketball-men/article/2021-march-madness-schedule
